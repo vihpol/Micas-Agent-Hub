@@ -24,24 +24,47 @@ const departments = [
 
 const outputCards = [
   {
-    title: "Activity",
-    text: "Agent progress and routing details will appear here.",
+    title: "Summary",
+    text: "A concise overview of the request will appear here.",
   },
   {
-    title: "Recommendations",
-    text: "Suggested next steps will be organized for review.",
+    title: "Missing Information",
+    text: "Any gaps or details needed before acting will be listed here.",
+  },
+  {
+    title: "Recommended Next Steps",
+    text: "Suggested follow-up actions will be organized here.",
   },
   {
     title: "Draft Output",
-    text: "Final summaries, notes, or generated drafts will show here.",
+    text: "Generated replies, plans, or working drafts will show here.",
+  },
+  {
+    title: "Assumptions",
+    text: "Important assumptions behind the response will be captured here.",
+  },
+  {
+    title: "Agent Trace",
+    text: "Mocked agent routing and reasoning notes will appear here.",
   },
 ];
 
+const outputTypes = [
+  "Summary",
+  "Reply Draft",
+  "Checklist",
+  "Follow-up Questions",
+  "Action Plan",
+] as const;
+
 type DepartmentName = (typeof departments)[number]["name"];
+type OutputType = (typeof outputTypes)[number];
 
 export default function Home() {
   const [selectedDepartment, setSelectedDepartment] =
     useState<DepartmentName>("Sales");
+  const [selectedOutputType, setSelectedOutputType] =
+    useState<OutputType>("Summary");
 
   const activeDepartment =
     departments.find((department) => department.name === selectedDepartment) ??
@@ -128,7 +151,7 @@ export default function Home() {
               <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-[color:var(--micas-navy)]">
                 <span className="block font-semibold">Ready for input</span>
                 <span className="mt-1 block text-xs text-slate-500">
-                  Paste a request, then run when agents are connected.
+                  Choose an output type, then run when agents are connected.
                 </span>
               </div>
             </div>
@@ -142,34 +165,58 @@ export default function Home() {
                     htmlFor="agent-request"
                     className="text-base font-semibold text-slate-900"
                   >
-                    Request
+                    Paste a customer email, internal request, or technical issue
                   </label>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Add the customer note, internal ask, or task details for this department.
+                    Keep the original wording intact so the mocked agent workspace can preserve context.
                   </p>
                 </div>
                 <span className="rounded-full bg-[color:var(--micas-soft-blue)] px-3 py-1 text-xs font-semibold text-[color:var(--micas-blue)]">
-                  Draft
+                  Mocked
                 </span>
               </div>
 
               <textarea
                 id="agent-request"
                 rows={12}
-                placeholder={`Example: Review this ${activeDepartment.name.toLowerCase()} request and suggest the next step...`}
+                placeholder={`Example: Paste a ${activeDepartment.name.toLowerCase()} email, internal request, or technical issue here...`}
                 className="mt-4 min-h-80 resize-none rounded-lg border border-blue-100 bg-blue-50/40 px-4 py-4 text-base leading-7 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[color:var(--micas-sky)] focus:bg-white focus:ring-4 focus:ring-blue-100"
               />
 
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs leading-5 text-slate-500">
-                  No data is sent until the button is wired to backend agent logic.
+              <div className="mt-4 rounded-lg border border-blue-100 bg-white p-3">
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+                  <div>
+                    <label
+                      htmlFor="output-type"
+                      className="text-sm font-semibold text-slate-800"
+                    >
+                      Output type
+                    </label>
+                    <select
+                      id="output-type"
+                      value={selectedOutputType}
+                      onChange={(event) =>
+                        setSelectedOutputType(event.target.value as OutputType)
+                      }
+                      className="mt-2 min-h-12 w-full rounded-lg border border-blue-100 bg-blue-50/50 px-3 text-sm font-medium text-slate-900 outline-none transition focus:border-[color:var(--micas-sky)] focus:bg-white focus:ring-4 focus:ring-blue-100"
+                    >
+                      {outputTypes.map((outputType) => (
+                        <option key={outputType} value={outputType}>
+                          {outputType}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className="min-h-12 rounded-lg bg-[color:var(--micas-blue)] px-6 text-sm font-semibold text-white shadow-sm shadow-blue-900/20 transition hover:bg-[color:var(--micas-navy)] focus:outline-none focus:ring-4 focus:ring-blue-200"
+                  >
+                    Run Agents
+                  </button>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Mocked frontend only. Selected output: {selectedOutputType}.
                 </p>
-                <button
-                  type="button"
-                  className="min-h-12 rounded-lg bg-[color:var(--micas-blue)] px-6 text-sm font-semibold text-white shadow-sm shadow-blue-900/20 transition hover:bg-[color:var(--micas-navy)] focus:outline-none focus:ring-4 focus:ring-blue-200"
-                >
-                  Run Agents
-                </button>
               </div>
             </section>
 
@@ -180,7 +227,7 @@ export default function Home() {
                     Output
                   </h3>
                   <p className="mt-1 text-sm text-slate-500">
-                    Results will stay organized here after a run.
+                    Placeholder cards are ready for mocked agent results.
                   </p>
                 </div>
                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
