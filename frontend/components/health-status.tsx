@@ -29,7 +29,7 @@ export function HealthStatus() {
 
   if (connectionState === "checking") {
     return (
-      <p className="text-sm font-medium text-slate-500">
+      <p className="text-sm font-medium text-blue-500">
         Checking backend connection...
       </p>
     );
@@ -37,7 +37,7 @@ export function HealthStatus() {
 
   if (connectionState === "connected") {
     return (
-      <p className="text-sm font-semibold text-emerald-700">
+      <p className="text-sm font-semibold text-blue-700">
         Backend connected
       </p>
     );
