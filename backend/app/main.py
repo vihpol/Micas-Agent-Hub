@@ -1,6 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.schemas import AnalyzeRequest, AnalyzeResponse
+from app.services.mock_analyzer import build_mock_analysis
+
 app = FastAPI(title="Micas AgentHub API")
 
 app.add_middleware(
@@ -19,3 +22,8 @@ app.add_middleware(
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/analyze", response_model=AnalyzeResponse)
+def analyze(payload: AnalyzeRequest) -> AnalyzeResponse:
+    return build_mock_analysis(payload)
