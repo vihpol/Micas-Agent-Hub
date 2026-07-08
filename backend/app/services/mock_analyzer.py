@@ -41,7 +41,7 @@ def build_mock_analysis(payload: AnalyzeRequest) -> AnalyzeResponse:
 
     return AnalyzeResponse(
         summary=(
-            f"{payload.category} request received for a {payload.output_type.lower()}. "
+            f"{payload.category} request received for output type: {payload.output_type}. "
             f"Initial read: {request_preview}"
         ),
         analysis=(
