@@ -6,7 +6,10 @@ ARG INSTALL_CREWAI=false
 
 COPY requirements.txt requirements-agents.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
-RUN if [ "$INSTALL_CREWAI" = "true" ]; then pip install --no-cache-dir -r requirements-agents.txt; fi
+RUN if [ "$INSTALL_CREWAI" = "true" ]; then \
+      pip install --no-cache-dir -r requirements-agents.txt && \
+      pip install --no-cache-dir --force-reinstall -r requirements.txt; \
+    fi
 
 COPY app ./app
 
