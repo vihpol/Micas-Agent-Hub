@@ -149,9 +149,18 @@ export default function Home() {
       return;
     }
 
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(analysisResult.draft_output);
-    } else {
+    let didCopy = false;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(analysisResult.draft_output);
+        didCopy = true;
+      }
+    } catch {
+      didCopy = false;
+    }
+
+    if (!didCopy) {
       const textarea = document.createElement("textarea");
       textarea.value = analysisResult.draft_output;
       textarea.style.position = "fixed";
