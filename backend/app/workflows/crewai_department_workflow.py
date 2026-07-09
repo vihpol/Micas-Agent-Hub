@@ -1,10 +1,7 @@
-import json
 import os
 from typing import Any
 
-from pydantic import ValidationError
-
-from app.schemas import AnalyzeResponse, Category, OutputType
+from app.schemas import AnalyzeResponse, AgentTraceItem, Category, OutputType
 
 
 class CrewAIWorkflowError(RuntimeError):
@@ -32,7 +29,8 @@ def run_crewai_department_workflow(
         model=model_name,
         base_url=ollama_base_url,
         temperature=0.2,
-        timeout=180,
+        timeout=60,
+        max_tokens=180,
     )
 
     analyzer = Agent(
@@ -42,8 +40,8 @@ def run_crewai_department_workflow(
         llm=llm,
         verbose=False,
         allow_delegation=False,
-        max_iter=3,
-        max_retry_limit=1,
+        max_iter=1,
+        max_retry_limit=0,
     )
     specialist = Agent(
         role="Specialist Agent",
@@ -55,8 +53,8 @@ def run_crewai_department_workflow(
         llm=llm,
         verbose=False,
         allow_delegation=False,
-        max_iter=3,
-        max_retry_limit=1,
+        max_iter=1,
+        max_retry_limit=0,
     )
     risk = Agent(
         role="Risk Agent",
@@ -65,8 +63,8 @@ def run_crewai_department_workflow(
         llm=llm,
         verbose=False,
         allow_delegation=False,
-        max_iter=3,
-        max_retry_limit=1,
+        max_iter=1,
+        max_retry_limit=0,
     )
     writer = Agent(
         role="Writer Agent",
@@ -75,8 +73,8 @@ def run_crewai_department_workflow(
         llm=llm,
         verbose=False,
         allow_delegation=False,
-        max_iter=3,
-        max_retry_limit=1,
+        max_iter=1,
+        max_retry_limit=0,
     )
     reviewer = Agent(
         role="Reviewer Agent",
@@ -85,8 +83,8 @@ def run_crewai_department_workflow(
         llm=llm,
         verbose=False,
         allow_delegation=False,
-        max_iter=3,
-        max_retry_limit=1,
+        max_iter=1,
+        max_retry_limit=0,
     )
 
     analyzer_task = Task(
@@ -95,63 +93,46 @@ def run_crewai_department_workflow(
             f"Department category: {category}\n"
             f"Requested output type: {output_type}\n"
             f"Request:\n{request}\n\n"
-            "Identify the core ask, relevant context, urgency, and intent."
+            "Return 2 short sentences: core ask, context, urgency, and intent."
         ),
-        expected_output="A concise intake analysis with core ask, context, urgency, and intent.",
+        expected_output="Two short sentences with the core ask and urgency.",
         agent=analyzer,
     )
     specialist_task = Task(
         description=(
             f"Using the analyzer findings, add {category} department-specific guidance. "
-            "Focus on what the department owner should understand before acting."
+            "Return 2 short sentences on what the owner should understand before acting."
         ),
-        expected_output=f"Department-specific {category} guidance for the selected output type.",
+        expected_output=f"Two short sentences of {category} guidance.",
         agent=specialist,
         context=[analyzer_task],
     )
     risk_task = Task(
         description=(
             "Review the analyzer and specialist findings. Identify missing information, "
-            "risks, blockers, and assumptions that should be surfaced to the user."
+            "risks, blockers, and assumptions. Return 3 short bullet lines."
         ),
-        expected_output="A list of missing information, risks, blockers, and assumptions.",
+        expected_output="Three short bullet lines with missing information or risks.",
         agent=risk,
         context=[analyzer_task, specialist_task],
     )
     writer_task = Task(
         description=(
             f"Draft the requested {output_type}. Keep it practical, clear, and suitable "
-            "for an internal SaaS dashboard output."
+            "for an internal SaaS dashboard output. Return one compact paragraph."
         ),
-        expected_output=f"A polished {output_type} draft plus recommended next steps.",
+        expected_output=f"One compact paragraph for the {output_type}.",
         agent=writer,
         context=[analyzer_task, specialist_task, risk_task],
     )
     reviewer_task = Task(
         description=(
-            "Create the final response as structured JSON only. It must match this exact shape:\n"
-            "{\n"
-            '  "summary": "string",\n'
-            '  "analysis": "string",\n'
-            '  "missing_information": ["string"],\n'
-            '  "recommended_next_steps": ["string"],\n'
-            '  "draft_output": "string",\n'
-            '  "assumptions": ["string"],\n'
-            '  "agent_trace": [\n'
-            '    {"agent": "Analyzer Agent", "role": "string", "output": "string"},\n'
-            '    {"agent": "Specialist Agent", "role": "string", "output": "string"},\n'
-            '    {"agent": "Risk Agent", "role": "string", "output": "string"},\n'
-            '    {"agent": "Writer Agent", "role": "string", "output": "string"},\n'
-            '    {"agent": "Reviewer Agent", "role": "string", "output": "string"}\n'
-            "  ]\n"
-            "}\n\n"
-            "The agent_trace must contain exactly those five agents in that order. "
-            "Do not include Markdown fences or explanatory text outside the JSON."
+            "Review the prior outputs for clarity and readiness. Return one sentence "
+            "stating whether the response is ready and what to verify next."
         ),
-        expected_output="A valid JSON object matching the AnalyzeResponse schema.",
+        expected_output="One short review sentence.",
         agent=reviewer,
         context=[analyzer_task, specialist_task, risk_task, writer_task],
-        output_pydantic=AnalyzeResponse,
     )
 
     crew = Crew(
@@ -162,46 +143,105 @@ def run_crewai_department_workflow(
     )
 
     try:
-        result = crew.kickoff()
+        crew.kickoff()
     except Exception as exc:
         raise CrewAIWorkflowError(f"CrewAI kickoff failed: {exc}") from exc
 
-    return _coerce_crewai_result(result)
+    analyzer_output = _task_output(analyzer_task)
+    specialist_output = _task_output(specialist_task)
+    risk_output = _task_output(risk_task)
+    writer_output = _task_output(writer_task)
+    reviewer_output = _task_output(reviewer_task)
+
+    return AnalyzeResponse(
+        summary=analyzer_output,
+        analysis=specialist_output,
+        missing_information=_lines_or_default(
+            risk_output,
+            [
+                "Confirm deadline and owner.",
+                "Confirm customer or internal stakeholder context.",
+                "Confirm any constraints before taking action.",
+            ],
+        ),
+        recommended_next_steps=_recommended_steps(category, output_type, reviewer_output),
+        draft_output=writer_output,
+        assumptions=[
+            "CrewAI ran against the configured Ollama model.",
+            "The response is based only on the pasted request.",
+            reviewer_output,
+        ],
+        agent_trace=[
+            AgentTraceItem(
+                agent="Analyzer Agent",
+                role="Classifies the request and extracts intent, urgency, and context.",
+                output=analyzer_output,
+            ),
+            AgentTraceItem(
+                agent="Specialist Agent",
+                role=f"Applies {category} department expertise to the request.",
+                output=specialist_output,
+            ),
+            AgentTraceItem(
+                agent="Risk Agent",
+                role="Checks missing information, blockers, risks, and assumptions.",
+                output=risk_output,
+            ),
+            AgentTraceItem(
+                agent="Writer Agent",
+                role=f"Drafts the selected {output_type} output.",
+                output=writer_output,
+            ),
+            AgentTraceItem(
+                agent="Reviewer Agent",
+                role="Reviews clarity and readiness before returning the result.",
+                output=reviewer_output,
+            ),
+        ],
+    )
 
 
-def _coerce_crewai_result(result: Any) -> AnalyzeResponse:
-    pydantic_result = getattr(result, "pydantic", None)
-    if isinstance(pydantic_result, AnalyzeResponse):
-        return pydantic_result
+def _task_output(task: Any) -> str:
+    output = getattr(task, "output", None)
+    raw = getattr(output, "raw", None)
+    if isinstance(raw, str) and raw.strip():
+        return _compact(raw)
 
-    json_dict = getattr(result, "json_dict", None)
-    if isinstance(json_dict, dict):
-        return _validate_response(json_dict)
+    if output is not None:
+        text = str(output).strip()
+        if text:
+            return _compact(text)
 
-    if isinstance(result, dict):
-        return _validate_response(result)
-
-    raw = getattr(result, "raw", None)
-    if isinstance(raw, str):
-        try:
-            return _validate_response(json.loads(raw))
-        except json.JSONDecodeError as exc:
-            raise CrewAIWorkflowError(
-                "CrewAI returned text that was not valid JSON."
-            ) from exc
-
-    try:
-        return _validate_response(json.loads(str(result)))
-    except (json.JSONDecodeError, TypeError) as exc:
-        raise CrewAIWorkflowError(
-            "CrewAI did not return a parseable structured response."
-        ) from exc
+    return "Agent completed, but did not return text."
 
 
-def _validate_response(data: dict[str, Any]) -> AnalyzeResponse:
-    try:
-        return AnalyzeResponse.model_validate(data)
-    except ValidationError as exc:
-        raise CrewAIWorkflowError(
-            "CrewAI returned JSON that did not match the /analyze response schema."
-        ) from exc
+def _compact(text: str, limit: int = 700) -> str:
+    compacted = " ".join(text.replace("```", "").split())
+    if len(compacted) <= limit:
+        return compacted
+
+    return f"{compacted[: limit - 3]}..."
+
+
+def _lines_or_default(text: str, default: list[str]) -> list[str]:
+    lines = [
+        line.strip(" -•\t")
+        for line in text.splitlines()
+        if line.strip(" -•\t")
+    ]
+    if not lines:
+        lines = [item.strip(" -•\t") for item in text.split(".") if item.strip(" -•\t")]
+
+    return lines[:4] or default
+
+
+def _recommended_steps(
+    category: Category,
+    output_type: OutputType,
+    reviewer_output: str,
+) -> list[str]:
+    return [
+        f"Review the generated {output_type.lower()} for {category.lower()} context.",
+        "Fill in any missing details before sending or assigning the work.",
+        reviewer_output,
+    ]
