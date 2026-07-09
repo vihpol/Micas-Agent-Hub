@@ -72,8 +72,8 @@ def run_department_workflow(
     """Run the configured department workflow.
 
     Mock responses remain the default so local Docker development works without
-    agent dependencies or API keys. Set USE_REAL_AGENTS=true and provide an
-    OPENAI_API_KEY to attempt the CrewAI workflow.
+    agent dependencies or a running Ollama model. Set USE_REAL_AGENTS=true to
+    attempt the CrewAI workflow.
     """
 
     if not _should_use_real_agents():
@@ -137,9 +137,8 @@ def run_mock_department_workflow(
 
 def _should_use_real_agents() -> bool:
     use_real_agents = os.getenv("USE_REAL_AGENTS", "false").strip().lower()
-    has_api_key = bool(os.getenv("OPENAI_API_KEY", "").strip())
 
-    return use_real_agents in {"1", "true", "yes", "on"} and has_api_key
+    return use_real_agents in {"1", "true", "yes", "on"}
 
 
 def _mock_response_with_agent_error(

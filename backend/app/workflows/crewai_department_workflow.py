@@ -19,23 +19,27 @@ def run_crewai_department_workflow(
     """Run the real CrewAI workflow and return the existing API response shape."""
 
     try:
-        from crewai import Agent, Crew, Process, Task
+        from crewai import Agent, Crew, LLM, Process, Task
     except ImportError as exc:
         raise CrewAIWorkflowError(
             "CrewAI is not installed. Install backend/requirements-agents.txt "
             "or build Docker with INSTALL_CREWAI=true."
         ) from exc
 
-    model_name = os.getenv(
-        "CREWAI_LLM_MODEL",
-        os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini"),
+    ollama_base_url = os.getenv("OLLAMA_API_BASE", "http://ollama:11434")
+    model_name = os.getenv("CREWAI_LLM_MODEL", "ollama_chat/llama3.2:3b")
+    llm = LLM(
+        model=model_name,
+        base_url=ollama_base_url,
+        temperature=0.2,
+        timeout=180,
     )
 
     analyzer = Agent(
         role="Analyzer Agent",
         goal="Classify the request and extract the core intent, urgency, and context.",
         backstory="You are careful at turning messy business requests into concise intake notes.",
-        llm=model_name,
+        llm=llm,
         verbose=False,
         allow_delegation=False,
         max_iter=3,
@@ -48,7 +52,7 @@ def run_crewai_department_workflow(
             f"You understand {category} work and can identify the practical next "
             "steps a department owner would need."
         ),
-        llm=model_name,
+        llm=llm,
         verbose=False,
         allow_delegation=False,
         max_iter=3,
@@ -58,7 +62,7 @@ def run_crewai_department_workflow(
         role="Risk Agent",
         goal="Find missing information, blockers, risks, and assumptions.",
         backstory="You are skeptical in a useful way and look for gaps before work begins.",
-        llm=model_name,
+        llm=llm,
         verbose=False,
         allow_delegation=False,
         max_iter=3,
@@ -68,7 +72,7 @@ def run_crewai_department_workflow(
         role="Writer Agent",
         goal=f"Draft the requested {output_type} output clearly and professionally.",
         backstory="You turn analysis into concise, usable business writing.",
-        llm=model_name,
+        llm=llm,
         verbose=False,
         allow_delegation=False,
         max_iter=3,
@@ -78,7 +82,7 @@ def run_crewai_department_workflow(
         role="Reviewer Agent",
         goal="Validate the final response and return only structured JSON.",
         backstory="You enforce schema compliance and make sure the answer is ready for the UI.",
-        llm=model_name,
+        llm=llm,
         verbose=False,
         allow_delegation=False,
         max_iter=3,

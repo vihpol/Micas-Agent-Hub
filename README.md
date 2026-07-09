@@ -54,7 +54,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 INSTALL_CREWAI=false
 USE_REAL_AGENTS=false
-CREWAI_LLM_MODEL=gpt-4o-mini
+CREWAI_LLM_MODEL=ollama_chat/llama3.2:3b
+OLLAMA_API_BASE=http://ollama:11434
+OLLAMA_MODEL=llama3.2:3b
 ```
 
 For normal local development, you do not need to set anything.
@@ -69,7 +71,7 @@ docker compose up --build
 
 Important: `NEXT_PUBLIC_API_URL` is baked into the Next.js browser bundle during build. If you change it, rebuild with `docker compose up --build`.
 
-## Real CrewAI Agents
+## Real CrewAI Agents With Ollama
 
 `/analyze` keeps the same request and response contract whether it uses mock data or real agents.
 
@@ -79,34 +81,59 @@ By default, real agents are off:
 docker compose up --build
 ```
 
-To enable CrewAI in Docker, install the optional agent dependencies at build time and provide an OpenAI API key:
+To run real CrewAI agents against an Ollama container:
 
 ```bash
+COMPOSE_PROFILES=agents \
 INSTALL_CREWAI=true \
 USE_REAL_AGENTS=true \
-OPENAI_API_KEY=your_api_key_here \
 docker compose up --build
 ```
+
+This starts:
+
+- `backend`
+- `frontend`
+- `ollama`
+- `ollama-pull`, which downloads `llama3.2:3b` by default
+
+The first run can take several minutes because Docker must pull the Ollama image and Ollama must download the model.
 
 Optional model override:
 
 ```bash
-CREWAI_LLM_MODEL=gpt-4o-mini
+OLLAMA_MODEL=llama3.2:3b
+CREWAI_LLM_MODEL=ollama_chat/llama3.2:3b
 ```
 
 Fallback behavior:
 
 - If `USE_REAL_AGENTS=false`, the backend uses the mock workflow.
-- If `USE_REAL_AGENTS=true` but `OPENAI_API_KEY` is missing, the backend uses the mock workflow.
+- If `USE_REAL_AGENTS=true` but CrewAI is not installed, the backend uses the mock fallback response.
+- If `USE_REAL_AGENTS=true` but Ollama is unavailable or the model is not ready, the backend uses the mock fallback response.
 - If CrewAI or the LLM fails, the backend returns the same structured `/analyze` response shape with a clear fallback note instead of breaking the frontend.
 
-For local Python development with real agents:
+For a VM or remote host:
+
+```bash
+COMPOSE_PROFILES=agents \
+INSTALL_CREWAI=true \
+USE_REAL_AGENTS=true \
+NEXT_PUBLIC_API_URL=http://YOUR_HOST_OR_IP:8000 \
+CORS_ORIGINS=http://YOUR_HOST_OR_IP:3000,http://localhost:3000 \
+docker compose up --build
+```
+
+For local Python development with real agents and a separately running Ollama server:
 
 ```bash
 cd backend
 pip install -r requirements.txt
 pip install -r requirements-agents.txt
-USE_REAL_AGENTS=true OPENAI_API_KEY=your_api_key_here uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+USE_REAL_AGENTS=true \
+OLLAMA_API_BASE=http://localhost:11434 \
+CREWAI_LLM_MODEL=ollama_chat/llama3.2:3b \
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Ports

@@ -6,8 +6,8 @@ services:
         INSTALL_CREWAI: ${INSTALL_CREWAI:-false}
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
-      CREWAI_LLM_MODEL: ${CREWAI_LLM_MODEL:-gpt-4o-mini}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      CREWAI_LLM_MODEL: ${CREWAI_LLM_MODEL:-ollama_chat/llama3.2:3b}
+      OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://ollama:11434}
       USE_REAL_AGENTS: ${USE_REAL_AGENTS:-false}
     ports:
       - "8000:8000"
@@ -29,3 +29,32 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles:
+      - agents
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    profiles:
+      - agents
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+    entrypoint: ["sh", "-c", "ollama pull \"$$OLLAMA_MODEL\""]
+    depends_on:
+      ollama:
+        condition: service_healthy
+
+volumes:
+  ollama-data:
