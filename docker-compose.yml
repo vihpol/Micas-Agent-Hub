@@ -34,8 +34,6 @@ services:
     image: ${OLLAMA_IMAGE:-ollama/ollama:0.1.48}
     profiles:
       - agents
-    ports:
-      - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:

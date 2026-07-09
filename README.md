@@ -98,6 +98,8 @@ This starts:
 - `ollama`
 - `ollama-pull`, which downloads `tinyllama` by default
 
+The Ollama service is available to the backend inside Docker at `http://ollama:11434`. It is not published to the host by default, which avoids conflicts if your machine or VM already has Ollama running on port `11434`.
+
 The first run can take several minutes because Docker must pull the Ollama image and Ollama must download the model.
 
 Optional model override:
