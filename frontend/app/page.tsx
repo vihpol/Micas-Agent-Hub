@@ -445,22 +445,62 @@ function ListItems({ items }: { items: string[] }) {
 
 function AgentTimeline({ items }: { items: AgentTraceItem[] }) {
   return (
-    <div className="space-y-0">
-      {items.map((item, index) => (
-        <div key={`${item.agent}-${index}`} className="relative flex gap-3 pb-4 last:pb-0">
-          {index < items.length - 1 ? (
-            <span className="absolute left-[5px] top-4 h-full w-px bg-blue-100" />
-          ) : null}
-          <span className="relative mt-1 h-3 w-3 shrink-0 rounded-full border-2 border-white bg-[color:var(--micas-blue)] shadow-sm shadow-blue-900/20" />
-          <div className="min-w-0">
-            <p className="font-semibold text-slate-800">{item.agent}</p>
-            <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[color:var(--micas-blue)]">
-              {item.role}
-            </p>
-            <p className="mt-1 text-sm leading-6 text-slate-600">{item.output}</p>
+    <div className="space-y-4">
+      <div className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[color:var(--micas-blue)]">
+          Why multiple agents?
+        </p>
+        <p className="mt-1 text-sm leading-6 text-slate-600">
+          Each agent handles a different responsibility: classify, extract,
+          check missing info, draft, and review.
+        </p>
+      </div>
+
+      <div className="space-y-0">
+        {items.map((item, index) => (
+          <div
+            key={`${item.agent}-${index}`}
+            className="relative flex gap-3 pb-4 last:pb-0"
+          >
+            {index < items.length - 1 ? (
+              <span className="absolute left-[13px] top-8 h-[calc(100%-1.25rem)] w-px bg-blue-200" />
+            ) : null}
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-blue-100 bg-white shadow-sm shadow-blue-900/10">
+              <span className="h-3 w-3 rounded-full bg-[color:var(--micas-blue)]" />
+            </span>
+            <div className="min-w-0 flex-1 rounded-lg border border-blue-100 bg-white p-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-800">
+                    {agentDisplayName(item.agent)}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[color:var(--micas-blue)]">
+                    {item.role}
+                  </p>
+                </div>
+                <span className="w-fit rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+                  Completed
+                </span>
+              </div>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                {item.output}
+              </p>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
+}
+
+function agentDisplayName(agent: string) {
+  if (agent.includes("Specialist")) {
+    return "Specialist Agent";
+  }
+
+  if (agent.includes("Risk")) {
+    return "Risk Agent";
+  }
+
+  return agent;
 }
