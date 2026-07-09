@@ -198,7 +198,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 p-4">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 pb-6">
             <div className="flex items-center justify-between px-1">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                 Departments
@@ -226,7 +226,7 @@ export default function Home() {
                     {isSelected ? (
                       <span className="absolute inset-y-3 left-0 w-1 rounded-r-full bg-[color:var(--micas-blue)]" />
                     ) : null}
-                    <span className="flex items-start gap-3">
+                    <span className="grid min-w-0 grid-cols-[2.5rem_minmax(0,1fr)] items-start gap-3 pl-0.5">
                       <DepartmentIcon
                         name={department.icon}
                         active={isSelected}
@@ -241,7 +241,7 @@ export default function Home() {
                         >
                           {department.name}
                         </span>
-                        <span className="mt-1.5 block text-xs leading-5 text-slate-500">
+                        <span className="mt-1.5 block max-w-full break-words text-xs leading-5 text-slate-500 [overflow-wrap:anywhere]">
                           {department.description}
                         </span>
                       </span>
