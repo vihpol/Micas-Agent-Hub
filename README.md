@@ -6,7 +6,7 @@ Micas AgentHub is a simple starter app with:
 - `backend`: FastAPI + Python
 - `docker-compose.yml`: runs both services together
 
-The backend currently exposes `/health` and `/analyze` with mocked workflow data. No database, auth, or real LLM calls are included yet.
+The backend exposes `/health` and `/analyze`. Mocked workflow data is used by default. Optional CrewAI support can be enabled with environment variables when you are ready to use real LLM-backed agents.
 
 ## Quick Start
 
@@ -52,6 +52,9 @@ Docker Compose uses these defaults:
 ```bash
 NEXT_PUBLIC_API_URL=http://localhost:8000
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+INSTALL_CREWAI=false
+USE_REAL_AGENTS=false
+CREWAI_LLM_MODEL=gpt-4o-mini
 ```
 
 For normal local development, you do not need to set anything.
@@ -65,6 +68,46 @@ docker compose up --build
 ```
 
 Important: `NEXT_PUBLIC_API_URL` is baked into the Next.js browser bundle during build. If you change it, rebuild with `docker compose up --build`.
+
+## Real CrewAI Agents
+
+`/analyze` keeps the same request and response contract whether it uses mock data or real agents.
+
+By default, real agents are off:
+
+```bash
+docker compose up --build
+```
+
+To enable CrewAI in Docker, install the optional agent dependencies at build time and provide an OpenAI API key:
+
+```bash
+INSTALL_CREWAI=true \
+USE_REAL_AGENTS=true \
+OPENAI_API_KEY=your_api_key_here \
+docker compose up --build
+```
+
+Optional model override:
+
+```bash
+CREWAI_LLM_MODEL=gpt-4o-mini
+```
+
+Fallback behavior:
+
+- If `USE_REAL_AGENTS=false`, the backend uses the mock workflow.
+- If `USE_REAL_AGENTS=true` but `OPENAI_API_KEY` is missing, the backend uses the mock workflow.
+- If CrewAI or the LLM fails, the backend returns the same structured `/analyze` response shape with a clear fallback note instead of breaking the frontend.
+
+For local Python development with real agents:
+
+```bash
+cd backend
+pip install -r requirements.txt
+pip install -r requirements-agents.txt
+USE_REAL_AGENTS=true OPENAI_API_KEY=your_api_key_here uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
 
 ## Ports
 

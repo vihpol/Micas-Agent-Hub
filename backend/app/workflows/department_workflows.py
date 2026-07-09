@@ -1,3 +1,4 @@
+import os
 from typing import TypedDict
 
 from app.schemas import AnalyzeResponse, AgentTraceItem, Category, OutputType
@@ -68,6 +69,36 @@ def run_department_workflow(
     output_type: OutputType,
     request: str,
 ) -> AnalyzeResponse:
+    """Run the configured department workflow.
+
+    Mock responses remain the default so local Docker development works without
+    agent dependencies or API keys. Set USE_REAL_AGENTS=true and provide an
+    OPENAI_API_KEY to attempt the CrewAI workflow.
+    """
+
+    if not _should_use_real_agents():
+        return run_mock_department_workflow(category, output_type, request)
+
+    try:
+        from app.workflows.crewai_department_workflow import (
+            run_crewai_department_workflow,
+        )
+
+        return run_crewai_department_workflow(category, output_type, request)
+    except Exception as exc:
+        return _mock_response_with_agent_error(
+            category=category,
+            output_type=output_type,
+            request=request,
+            error=str(exc),
+        )
+
+
+def run_mock_department_workflow(
+    category: Category,
+    output_type: OutputType,
+    request: str,
+) -> AnalyzeResponse:
     """Mock department workflow.
 
     The agent step functions below are intentionally small and isolated so they
@@ -102,6 +133,40 @@ def run_department_workflow(
             reviewer_result["trace"],
         ],
     )
+
+
+def _should_use_real_agents() -> bool:
+    use_real_agents = os.getenv("USE_REAL_AGENTS", "false").strip().lower()
+    has_api_key = bool(os.getenv("OPENAI_API_KEY", "").strip())
+
+    return use_real_agents in {"1", "true", "yes", "on"} and has_api_key
+
+
+def _mock_response_with_agent_error(
+    category: Category,
+    output_type: OutputType,
+    request: str,
+    error: str,
+) -> AnalyzeResponse:
+    response = run_mock_department_workflow(category, output_type, request)
+    response.summary = f"Real agent workflow failed; mock fallback used. {response.summary}"
+    response.analysis = (
+        "CrewAI could not complete the real-agent workflow, so the backend "
+        f"returned the mock workflow response instead. Error: {_preview_text(error)}"
+    )
+    response.assumptions = [
+        *response.assumptions,
+        "Real agent execution was requested but failed before a valid structured response was returned.",
+    ]
+    response.agent_trace.append(
+        AgentTraceItem(
+            agent="Workflow Error Handler",
+            role="Catches real-agent failures and preserves the /analyze response contract.",
+            output=f"Returned mock fallback after CrewAI error: {_preview_text(error)}",
+        )
+    )
+
+    return response
 
 
 def _run_analyzer_agent(request: str) -> AnalyzerResult:

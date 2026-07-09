@@ -2,8 +2,13 @@ services:
   backend:
     build:
       context: ./backend
+      args:
+        INSTALL_CREWAI: ${INSTALL_CREWAI:-false}
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CREWAI_LLM_MODEL: ${CREWAI_LLM_MODEL:-gpt-4o-mini}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      USE_REAL_AGENTS: ${USE_REAL_AGENTS:-false}
     ports:
       - "8000:8000"
     healthcheck:
