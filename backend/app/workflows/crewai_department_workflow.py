@@ -27,7 +27,7 @@ def run_crewai_department_workflow(
         ) from exc
 
     ollama_base_url = os.getenv("OLLAMA_API_BASE", "http://ollama:11434")
-    model_name = os.getenv("CREWAI_LLM_MODEL", "ollama_chat/llama3.2:3b")
+    model_name = os.getenv("CREWAI_LLM_MODEL", "ollama_chat/tinyllama")
     llm = LLM(
         model=model_name,
         base_url=ollama_base_url,

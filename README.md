@@ -54,9 +54,10 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 INSTALL_CREWAI=false
 USE_REAL_AGENTS=false
-CREWAI_LLM_MODEL=ollama_chat/llama3.2:3b
+CREWAI_LLM_MODEL=ollama_chat/tinyllama
 OLLAMA_API_BASE=http://ollama:11434
-OLLAMA_MODEL=llama3.2:3b
+OLLAMA_IMAGE=ollama/ollama:0.1.48
+OLLAMA_MODEL=tinyllama
 ```
 
 For normal local development, you do not need to set anything.
@@ -95,7 +96,7 @@ This starts:
 - `backend`
 - `frontend`
 - `ollama`
-- `ollama-pull`, which downloads `llama3.2:3b` by default
+- `ollama-pull`, which downloads `tinyllama` by default
 
 The first run can take several minutes because Docker must pull the Ollama image and Ollama must download the model.
 
@@ -104,7 +105,10 @@ Optional model override:
 ```bash
 OLLAMA_MODEL=llama3.2:3b
 CREWAI_LLM_MODEL=ollama_chat/llama3.2:3b
+OLLAMA_IMAGE=ollama/ollama:latest
 ```
+
+The default uses a smaller pinned Ollama image and `tinyllama` so small VMs can run real-agent mode without immediately filling the disk. Use the optional override above if you have more disk and want a stronger model.
 
 Fallback behavior:
 
@@ -132,7 +136,7 @@ pip install -r requirements.txt
 pip install -r requirements-agents.txt
 USE_REAL_AGENTS=true \
 OLLAMA_API_BASE=http://localhost:11434 \
-CREWAI_LLM_MODEL=ollama_chat/llama3.2:3b \
+CREWAI_LLM_MODEL=ollama_chat/tinyllama \
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
