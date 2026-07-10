@@ -8,6 +8,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       CREWAI_LLM_MODEL: ${CREWAI_LLM_MODEL:-ollama_chat/tinyllama}
       OLLAMA_API_BASE: ${OLLAMA_API_BASE:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-tinyllama}
+      REAL_AGENT_ENGINE: ${REAL_AGENT_ENGINE:-ollama}
       USE_REAL_AGENTS: ${USE_REAL_AGENTS:-false}
     ports:
       - "8000:8000"

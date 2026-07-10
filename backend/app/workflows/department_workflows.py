@@ -73,18 +73,26 @@ def run_department_workflow(
 
     Mock responses remain the default so local Docker development works without
     agent dependencies or a running Ollama model. Set USE_REAL_AGENTS=true to
-    attempt the CrewAI workflow.
+    run the lightweight Ollama workflow. Set REAL_AGENT_ENGINE=crewai to use
+    the CrewAI workflow on machines with enough resources for it.
     """
 
     if not _should_use_real_agents():
         return run_mock_department_workflow(category, output_type, request)
 
     try:
-        from app.workflows.crewai_department_workflow import (
-            run_crewai_department_workflow,
+        if _real_agent_engine() == "crewai":
+            from app.workflows.crewai_department_workflow import (
+                run_crewai_department_workflow,
+            )
+
+            return run_crewai_department_workflow(category, output_type, request)
+
+        from app.workflows.ollama_department_workflow import (
+            run_ollama_department_workflow,
         )
 
-        return run_crewai_department_workflow(category, output_type, request)
+        return run_ollama_department_workflow(category, output_type, request)
     except Exception as exc:
         return _mock_response_with_agent_error(
             category=category,
@@ -92,7 +100,6 @@ def run_department_workflow(
             request=request,
             error=str(exc),
         )
-
 
 def run_mock_department_workflow(
     category: Category,
@@ -139,6 +146,10 @@ def _should_use_real_agents() -> bool:
     use_real_agents = os.getenv("USE_REAL_AGENTS", "false").strip().lower()
 
     return use_real_agents in {"1", "true", "yes", "on"}
+
+
+def _real_agent_engine() -> str:
+    return os.getenv("REAL_AGENT_ENGINE", "ollama").strip().lower()
 
 
 def _mock_response_with_agent_error(

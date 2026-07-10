@@ -6,7 +6,7 @@ Micas AgentHub is a simple starter app with:
 - `backend`: FastAPI + Python
 - `docker-compose.yml`: runs both services together
 
-The backend exposes `/health` and `/analyze`. Mocked workflow data is used by default. Optional CrewAI support can be enabled with environment variables when you are ready to use real LLM-backed agents.
+The backend exposes `/health` and `/analyze`. Mocked workflow data is used by default. Optional Ollama and CrewAI support can be enabled with environment variables when you are ready to use real LLM-backed agents.
 
 ## Quick Start
 
@@ -54,6 +54,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
 INSTALL_CREWAI=false
 USE_REAL_AGENTS=false
+REAL_AGENT_ENGINE=ollama
 CREWAI_LLM_MODEL=ollama_chat/tinyllama
 OLLAMA_API_BASE=http://ollama:11434
 OLLAMA_IMAGE=ollama/ollama:0.1.48
@@ -72,7 +73,7 @@ docker compose up --build
 
 Important: `NEXT_PUBLIC_API_URL` is baked into the Next.js browser bundle during build. If you change it, rebuild with `docker compose up --build`.
 
-## Real CrewAI Agents With Ollama
+## Real Ollama Agents
 
 `/analyze` keeps the same request and response contract whether it uses mock data or real agents.
 
@@ -82,11 +83,10 @@ By default, real agents are off:
 docker compose up --build
 ```
 
-To run real CrewAI agents against an Ollama container:
+To run the lightweight real-agent workflow against an Ollama container:
 
 ```bash
 COMPOSE_PROFILES=agents \
-INSTALL_CREWAI=true \
 USE_REAL_AGENTS=true \
 docker compose up --build
 ```
@@ -112,18 +112,27 @@ OLLAMA_IMAGE=ollama/ollama:latest
 
 The default uses a smaller pinned Ollama image and `tinyllama` so small VMs can run real-agent mode without immediately filling the disk. Use the optional override above if you have more disk and want a stronger model.
 
+CrewAI is still available for larger machines:
+
+```bash
+COMPOSE_PROFILES=agents \
+INSTALL_CREWAI=true \
+USE_REAL_AGENTS=true \
+REAL_AGENT_ENGINE=crewai \
+docker compose up --build
+```
+
 Fallback behavior:
 
 - If `USE_REAL_AGENTS=false`, the backend uses the mock workflow.
-- If `USE_REAL_AGENTS=true` but CrewAI is not installed, the backend uses the mock fallback response.
+- If `USE_REAL_AGENTS=true`, the backend uses the Ollama workflow unless `REAL_AGENT_ENGINE=crewai` is set.
 - If `USE_REAL_AGENTS=true` but Ollama is unavailable or the model is not ready, the backend uses the mock fallback response.
-- If CrewAI or the LLM fails, the backend returns the same structured `/analyze` response shape with a clear fallback note instead of breaking the frontend.
+- If Ollama, CrewAI, or the LLM fails, the backend returns the same structured `/analyze` response shape with a clear fallback note instead of breaking the frontend.
 
 For a VM or remote host:
 
 ```bash
 COMPOSE_PROFILES=agents \
-INSTALL_CREWAI=true \
 USE_REAL_AGENTS=true \
 NEXT_PUBLIC_API_URL=http://YOUR_HOST_OR_IP:8000 \
 CORS_ORIGINS=http://YOUR_HOST_OR_IP:3000,http://localhost:3000 \
@@ -138,7 +147,7 @@ pip install -r requirements.txt
 pip install -r requirements-agents.txt
 USE_REAL_AGENTS=true \
 OLLAMA_API_BASE=http://localhost:11434 \
-CREWAI_LLM_MODEL=ollama_chat/tinyllama \
+OLLAMA_MODEL=tinyllama \
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
